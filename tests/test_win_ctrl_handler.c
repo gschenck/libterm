@@ -15,6 +15,7 @@
 #include <windows.h>
 
 #include <assert.h>
+#include <stdint.h>
 #include <string.h>
 
 static PHANDLER_ROUTINE registered = NULL;
