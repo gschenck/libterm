@@ -151,6 +151,30 @@ int lt__win_key_event(const KEY_EVENT_RECORD *k, lt_uchar cp, int input_mode,
     return 1;
   }
 
+  /* Ctrl+<key without a control character>, modern model. On non-US layouts
+   * the console reports Ctrl+<OEM key> with uChar = 0 (German Ctrl+Ä / Ctrl+Ö
+   * on VK_OEM_7 / VK_OEM_3), so the chord was dropped; or it maps the chord
+   * to a control byte that belongs to a different key on the US layout
+   * (German Ctrl+Ü on VK_OEM_1 yields 0x1B and was reported as Escape).
+   * Report the key's unshifted base character instead (MapVirtualKeyW,
+   * Latin-1 capitals lowercased) with the held modifiers, like the
+   * Ctrl+letter case above. Only for non-ASCII base characters, so US Ctrl+[
+   * (= ESC) keeps its control byte below; not for Ctrl+Alt (AltGr), which
+   * is a character-producing chord, not a Ctrl chord. */
+  if (!compat && cp < 0x20 && (st & (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED)) &&
+      !(st & (LEFT_ALT_PRESSED | RIGHT_ALT_PRESSED)) &&
+      !(k->wVirtualKeyCode >= 'A' && k->wVirtualKeyCode <= 'Z')) {
+    UINT m = MapVirtualKeyW(k->wVirtualKeyCode, MAPVK_VK_TO_CHAR);
+    /* bit 31 flags a dead key; stay within the BMP (lt_uchar carries it). */
+    if (m != 0 && !(m & 0x80000000u) && m >= 0xA0 && m < 0x10000) {
+      if (m >= 0xC0 && m <= 0xDE && m != 0xD7)
+        m += 0x20; /* Latin-1 capital -> small letter */
+      ev->ch = (lt_uchar)m;
+      ev->key = 0;
+      return 1;
+    }
+  }
+
   /* Standalone control byte (Ctrl+<non-letter>, or any Ctrl+letter in compat
    * mode): termbox2 model -> key = byte, ch = 0, mod = 0, matching POSIX. */
   if (cp != 0 && (cp < 0x20 || cp == 0x7F)) {

@@ -7,6 +7,15 @@ may contain breaking API changes; patch versions never do).
 
 ## [Unreleased]
 
+### Fixed
+
+- Windows: Ctrl + a key whose base character is not ASCII (German Ctrl+Ä,
+  Ctrl+Ö on `VK_OEM_7` / `VK_OEM_3`) was dropped because the console reports
+  it with `uChar = 0`, and German Ctrl+Ü (`VK_OEM_1`, reported as 0x1B) was
+  delivered as Escape. The modern input model now reports these as
+  `ch = <base character>` + `LT_MOD_CTRL`, like Ctrl+letter. Compat mode and
+  ASCII chords (US Ctrl+[) are unchanged.
+
 ## [0.1.2] - 2026-06-15
 
 Additive API release. The core API and ABI are unchanged from 0.1.1 — every

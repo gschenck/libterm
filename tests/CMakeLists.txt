@@ -73,6 +73,14 @@ endif()
 if(WIN32)
     libterm_add_test(test_win_sgr_output)
     libterm_add_test(test_win_key)
+    # White-box: compiles plat_keys.c with a stubbed MapVirtualKeyW (German
+    # layout), so it must not link the library (duplicate symbols).
+    add_executable(test_win_key_oem test_win_key_oem.c)
+    target_include_directories(test_win_key_oem PRIVATE
+        ${PROJECT_SOURCE_DIR}/src
+        ${PROJECT_SOURCE_DIR}/include
+    )
+    add_test(NAME test_win_key_oem COMMAND test_win_key_oem)
     libterm_add_test(test_win_mouse)
     libterm_add_test(test_win_color_query)
 endif()
