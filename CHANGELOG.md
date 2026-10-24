@@ -7,6 +7,14 @@ may contain breaking API changes; patch versions never do).
 
 ## [Unreleased]
 
+### Fixed
+- **POSIX input:** Alt + non-ASCII character over a legacy (non-kitty) terminal
+  (`ESC C3 A4` = Alt-Ä) folded only the lead byte into the Alt event; the
+  continuation bytes were delivered as `U+FFFD` / stray keypresses. The whole
+  UTF-8 character is now assembled (from the sequence, else via the tail reader)
+  and reported once with `LT_MOD_ALT`. Tests: Alt-Ä and Alt-€ in
+  `run_input_mode_alt`.
+
 ## [0.1.2] - 2026-06-15
 
 Additive API release. The core API and ABI are unchanged from 0.1.1 — every

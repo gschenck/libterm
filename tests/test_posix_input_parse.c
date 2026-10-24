@@ -478,6 +478,30 @@ static void run_input_mode_alt(void) {
     assert(ev.mod == LT_MOD_ALT);
   }
 
+  /* Alt + non-ASCII character: a legacy terminal sends Alt-Ä as ESC C3 A4
+   * (and Alt-€ as ESC E2 82 AC). The whole UTF-8 character must be folded
+   * into ONE event with LT_MOD_ALT; folding only the lead byte turned the
+   * continuation bytes into U+FFFD / stray keypresses. */
+  {
+    struct lt_event ev;
+    memset(&ev, 0, sizeof(ev));
+    ev.type = LT_EVENT_KEY;
+    const unsigned char s[] = {'\x1b', 0xC3, 0xA4};
+    assert(lt__posix_handle_alt_combo(s, sizeof(s), &ev) == LT_OK);
+    assert(ev.key == 0);
+    assert(ev.ch == 0xE4);
+    assert(ev.mod == LT_MOD_ALT);
+  }
+  {
+    struct lt_event ev;
+    memset(&ev, 0, sizeof(ev));
+    ev.type = LT_EVENT_KEY;
+    const unsigned char s[] = {'\x1b', 0xE2, 0x82, 0xAC};
+    assert(lt__posix_handle_alt_combo(s, sizeof(s), &ev) == LT_OK);
+    assert(ev.ch == 0x20AC);
+    assert(ev.mod == LT_MOD_ALT);
+  }
+
   /* Alt+Ctrl+a (ESC 0x01) -> key=CTRL_A, ch=0, mod=ALT (control byte). */
   {
     struct lt_event ev;

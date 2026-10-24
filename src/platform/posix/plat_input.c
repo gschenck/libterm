@@ -385,6 +385,28 @@ static int lt__posix_handle_alt_combo(const unsigned char *seq, size_t seq_len,
               (lt__g.input_mode & LT_INPUT_ALT);
   if (fold) {
     unsigned char b = seq[1];
+    /* Alt + UTF-8 character (German keyboard Alt-Ä/Ö/Ü over a legacy
+     * terminal: ESC C3 A4). Folding only the lead byte left the
+     * continuation bytes to decode as U+FFFD / stray keypresses. Assemble
+     * the whole character (continuation bytes from seq, else read with the
+     * UTF-8 grace period) and report it with LT_MOD_ALT. */
+    int need = lt__utf8_char_length((char)b);
+    if (b >= 0xC2 && need >= 2 && need <= 4) {
+      unsigned char u[4] = {b, 0, 0, 0};
+      size_t have = 1, k = 2;
+      while (have < (size_t)need && k < seq_len)
+        u[have++] = seq[k++];
+      if (k < seq_len)
+        lt__posix_pending_push(seq + k, seq_len - k);
+      if (have < (size_t)need)
+        have = lt__posix_read_utf8_tail(u, have, (size_t)need);
+      lt_uchar cp = 0;
+      int dec = lt__utf8_decode((const char *)u, have, &cp);
+      ev->key = 0;
+      ev->ch = (dec == need) ? cp : 0xFFFD;
+      ev->mod |= LT_MOD_ALT;
+      return LT_OK;
+    }
     if (!lt__posix_ctrl_byte_event(b, ev))
       ev->ch = (lt_uchar)b;
     ev->mod |= LT_MOD_ALT;
