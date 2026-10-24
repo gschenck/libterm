@@ -7,6 +7,18 @@ may contain breaking API changes; patch versions never do).
 
 ## [Unreleased]
 
+### Fixed
+- **Renderer:** wide characters (CJK, emoji) shifted the rest of the row. `lt_print`
+  advanced two cells for a 2-column glyph but left the second cell untouched;
+  `lt_present` emitted every cell as one character and advanced its cached cursor
+  by one per cell. Whenever that second cell differed from the previous frame, a
+  space went out behind the glyph (three columns per wide character, the row
+  shifted right, the cached cursor one column behind the terminal). `lt_set_cell`
+  now marks the second cell with an internal tail sentinel (and clears a stale
+  head/tail when either half is overwritten); the renderer emits nothing for the
+  tail and never starts or ends a diff run between a head and its tail. Test:
+  `tests/test_wide_tail.c` replays the emitted bytes through a column model.
+
 ## [0.1.2] - 2026-06-15
 
 Additive API release. The core API and ABI are unchanged from 0.1.1 — every

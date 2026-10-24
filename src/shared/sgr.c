@@ -306,6 +306,8 @@ int lt__render_run(const struct lt_cell *cells, int count) {
 
     if (has_cluster) {
       for (int k = i; k < j; k++) {
+        if (cells[k].ch == LT__WIDE_TAIL)
+          continue; /* wide tail: nothing to emit */
         rc = lt__render_cluster_cell(&cells[k]);
         if (rc != LT_OK)
           return rc;
@@ -328,6 +330,8 @@ int lt__render_run(const struct lt_cell *cells, int count) {
 
     pos = 0;
     for (int k = i; k < j; k++) {
+      if (cells[k].ch == LT__WIDE_TAIL)
+        continue; /* wide tail: the head already advanced two columns */
       ch = cells[k].ch ? cells[k].ch : (lt_uchar)' ';
 
       if (ch < 0x80) {

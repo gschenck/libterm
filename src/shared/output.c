@@ -116,6 +116,13 @@ int lt_present(void) {
 
       idx = (size_t)(y * lt__g.width + x);
 
+      /* A run must not begin on the tail of a wide character -- re-emit
+       * the head so the glyph is complete. */
+      if (lt__g.back[idx].ch == LT__WIDE_TAIL && x > 0) {
+        x--;
+        idx--;
+      }
+
       if (force) {
         run_len = lt__g.width - x; /* rest of the row in one block */
       } else {
@@ -124,6 +131,11 @@ int lt_present(void) {
             &lt__g.back[idx + 1], &lt__g.front[idx + 1], lt__g.width - x - 1);
         run_len = 1 + rest;
       }
+      /* ... and must not end between a head and its tail (the head alone
+       * advances the terminal by two columns, the cached cursor by one). */
+      if (x + run_len < lt__g.width &&
+          lt__g.back[idx + (size_t)run_len].ch == LT__WIDE_TAIL)
+        run_len++;
       run_end = x + run_len;
 #if LT_RENDER_STATS
       lt__g.stats.diff_runs++;

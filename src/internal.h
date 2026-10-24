@@ -29,6 +29,16 @@ struct lt__render_stats {
 #endif
 
 /* ---- fg/bg bit layout (see LT_* macros in libterm.h) ---- */
+/* Wide characters: the second cell of a 2-column character carries this
+ * sentinel in `ch`. lt_set_cell() writes it when a wide code point is placed
+ * (and clears a stale head/tail when either half is overwritten); the
+ * renderer emits NOTHING for it and never starts or ends a diff run between
+ * a head and its tail, so the terminal cursor and the cached cursor (cur_x)
+ * stay in step. Before this, the tail cell was left untouched and emitted as
+ * its own character, which pushed the rest of the row one column to the
+ * right whenever the tail cell differed from the previous frame. */
+#define LT__WIDE_TAIL 0xFFFFFFFFu
+
 #define LT__COLOR_MASK 0x00FFFFFFu /* bits 0-23: color value */
 #define LT__ATTR_MASK 0x7F000000u  /* bits 24-30: the 7 attribute bits */
 

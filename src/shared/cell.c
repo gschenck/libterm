@@ -12,10 +12,32 @@ int lt_set_cell(int x, int y, lt_uchar ch, lt_attr fg, lt_attr bg) {
   lt__g.dirty_rows[y] = true;
 
   const size_t idx = (size_t)(y * lt__g.width + x);
+
+  /* Keep head/tail pairs of wide characters consistent (LT__WIDE_TAIL). */
+  if (lt__g.back[idx].ch == LT__WIDE_TAIL && x > 0 && ch != LT__WIDE_TAIL) {
+    /* Overwriting a tail: the head to the left loses its second column. */
+    lt__g.back[idx - 1].ch = (lt_uchar)' ';
+    lt__g.back[idx - 1]._reserved = 0;
+  } else if (x + 1 < lt__g.width && lt__g.back[idx + 1].ch == LT__WIDE_TAIL &&
+             lt__wcwidth(ch) != 2) {
+    /* Overwriting a head with a narrow character: drop the stale tail. */
+    lt__g.back[idx + 1].ch = (lt_uchar)' ';
+    lt__g.back[idx + 1].fg = fg;
+    lt__g.back[idx + 1].bg = bg;
+    lt__g.back[idx + 1]._reserved = 0;
+  }
+
   lt__g.back[idx].ch = ch;
   lt__g.back[idx].fg = fg;
   lt__g.back[idx].bg = bg;
   lt__g.back[idx]._reserved = 0;
+
+  if (ch != LT__WIDE_TAIL && lt__wcwidth(ch) == 2 && x + 1 < lt__g.width) {
+    lt__g.back[idx + 1].ch = LT__WIDE_TAIL;
+    lt__g.back[idx + 1].fg = fg;
+    lt__g.back[idx + 1].bg = bg;
+    lt__g.back[idx + 1]._reserved = 0;
+  }
 
   return LT_OK;
 }
