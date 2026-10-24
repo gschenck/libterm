@@ -7,6 +7,14 @@ may contain breaking API changes; patch versions never do).
 
 ## [Unreleased]
 
+### Fixed
+- **Windows input:** Ctrl+digit and Ctrl+Shift+digit were lost. The console
+  delivers `uChar = 0` for most digits and a control byte for a few (Ctrl+2 = NUL,
+  Ctrl+6 = 0x1E); only Ctrl+letter was disambiguated. The modern model now reports
+  the key's digit (virtual key `'0'..'9'`, layout-independent) with the held
+  modifiers, like POSIX with kitty (`CSI 49;5u`). Compat mode and AltGr+digit are
+  unchanged; numpad digits are left alone. Tests in `tests/test_win_key.c`.
+
 ## [0.1.2] - 2026-06-15
 
 Additive API release. The core API and ABI are unchanged from 0.1.1 — every

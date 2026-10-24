@@ -128,5 +128,40 @@ int main(void) {
   assert(ev.key == 0);
   assert(ev.mod == (LT_MOD_CTRL | LT_MOD_SHIFT));
 
+  /* Ctrl+digit, modern model: the console delivers uChar = 0 for most digits
+   * and a control byte for a few (Ctrl+2 = NUL, Ctrl+6 = 0x1E); the digit was
+   * lost. Expected: ch = the digit (layout-independent: German Shift+1 is '!'
+   * but the key is still '1') + CTRL, like POSIX with kitty (CSI 49;5u). */
+  KEY_EVENT_RECORD c1 = mk('1', 0, 0, LEFT_CTRL_PRESSED, TRUE, 1);
+  assert(lt__win_key_event(&c1, 0, 0, &ev) == 1);
+  assert(ev.key == 0);
+  assert(ev.ch == '1');
+  assert(ev.mod == LT_MOD_CTRL);
+
+  /* Ctrl+Shift+1 -> '1' + CTRL|SHIFT. */
+  KEY_EVENT_RECORD cs1 =
+      mk('1', 0, 0, LEFT_CTRL_PRESSED | SHIFT_PRESSED, TRUE, 1);
+  assert(lt__win_key_event(&cs1, 0, 0, &ev) == 1);
+  assert(ev.ch == '1');
+  assert(ev.mod == (LT_MOD_CTRL | LT_MOD_SHIFT));
+
+  /* Ctrl+6 arrives as control byte 0x1E -- still the digit, not key 0x1E. */
+  KEY_EVENT_RECORD c6 = mk('6', 0, 0x1E, LEFT_CTRL_PRESSED, TRUE, 1);
+  assert(lt__win_key_event(&c6, 0x1E, 0, &ev) == 1);
+  assert(ev.ch == '6');
+  assert(ev.mod == LT_MOD_CTRL);
+
+  /* Compat model keeps the termbox2 control-byte semantics for Ctrl+6. */
+  assert(lt__win_key_event(&c6, 0x1E, LT_INPUT_COMPAT, &ev) == 1);
+  assert(ev.key == 0x1E);
+  assert(ev.ch == 0);
+
+  /* AltGr+digit (Ctrl+Alt with a printable char, e.g. German AltGr+2 = ²) is
+   * a character and must stay one. */
+  KEY_EVENT_RECORD altgr2 =
+      mk('2', 0, 0xB2, LEFT_CTRL_PRESSED | RIGHT_ALT_PRESSED, TRUE, 1);
+  assert(lt__win_key_event(&altgr2, 0xB2, 0, &ev) == 1);
+  assert(ev.ch == 0xB2);
+
   return 0;
 }

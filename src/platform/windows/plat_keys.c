@@ -151,6 +151,23 @@ int lt__win_key_event(const KEY_EVENT_RECORD *k, lt_uchar cp, int input_mode,
     return 1;
   }
 
+  /* Ctrl+digit and Ctrl+Shift+digit, modern model: the console delivers
+   * uChar = 0 for most digits and a control byte for a few (Ctrl+2 = NUL,
+   * Ctrl+6 = 0x1E), so the digit was lost (Windows Terminal, bookmarks /
+   * favourites bound to Ctrl+1..9). Report the key's digit (VK '0'..'9',
+   * independent of the layout -- German Shift+1 is '!', the key is still
+   * '1') with the held modifiers, like POSIX with kitty (CSI 49;5u / ;6u).
+   * Ctrl+Alt+digit is included on purpose: AltGr+digit yields a printable
+   * character (cp >= 0x20) and never reaches this branch, so an Alt check
+   * would only block real Ctrl+Alt+digit. Numpad digits (VK_NUMPAD0-9) are
+   * left alone. */
+  if (!compat && cp < 0x20 && (st & (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED)) &&
+      k->wVirtualKeyCode >= '0' && k->wVirtualKeyCode <= '9') {
+    ev->ch = (lt_uchar)k->wVirtualKeyCode;
+    ev->key = 0;
+    return 1;
+  }
+
   /* Standalone control byte (Ctrl+<non-letter>, or any Ctrl+letter in compat
    * mode): termbox2 model -> key = byte, ch = 0, mod = 0, matching POSIX. */
   if (cp != 0 && (cp < 0x20 || cp == 0x7F)) {
