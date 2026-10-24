@@ -74,6 +74,13 @@ if(WIN32)
     libterm_add_test(test_win_sgr_output)
     libterm_add_test(test_win_key)
     libterm_add_test(test_win_mouse)
+    # White-box: compiles plat_init.c with stubbed console calls, no library.
+    add_executable(test_win_ctrl_handler test_win_ctrl_handler.c)
+    target_include_directories(test_win_ctrl_handler PRIVATE
+        ${PROJECT_SOURCE_DIR}/src
+        ${PROJECT_SOURCE_DIR}/include
+    )
+    add_test(NAME test_win_ctrl_handler COMMAND test_win_ctrl_handler)
     libterm_add_test(test_win_color_query)
 endif()
 if(NOT WIN32)

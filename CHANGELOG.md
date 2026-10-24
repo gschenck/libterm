@@ -7,6 +7,16 @@ may contain breaking API changes; patch versions never do).
 
 ## [Unreleased]
 
+### Fixed
+
+- Windows: Ctrl+C / Ctrl+Break could terminate the process (0xC000013A)
+  after a child process sharing the console had re-enabled
+  `ENABLE_PROCESSED_INPUT`. `lt_init` now registers a console control handler
+  that consumes `CTRL_C_EVENT` and `CTRL_BREAK_EVENT` so both keep arriving as
+  keys (POSIX raw-mode parity); `lt_shutdown` removes it. The handler is not
+  inherited by child processes, so commands spawned by the application can
+  still be interrupted with Ctrl+C.
+
 ## [0.1.2] - 2026-06-15
 
 Additive API release. The core API and ABI are unchanged from 0.1.1 — every

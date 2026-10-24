@@ -22,6 +22,19 @@ static int lt__win_is_bad_handle(HANDLE h) {
   return h == NULL || h == INVALID_HANDLE_VALUE;
 }
 
+/* Ctrl+C / Ctrl+Break must reach the application as keys, not terminate it.
+ * Clearing ENABLE_PROCESSED_INPUT alone is not enough: child processes that
+ * share the console (a shell, a filter, a spawned tool) frequently switch
+ * processed input back on and leave it on when they exit, after which the
+ * next Ctrl+C raises CTRL_C_EVENT and kills the process (0xC000013A). A
+ * registered handler that swallows both events keeps POSIX parity (raw mode
+ * clears ISIG there). Unlike SetConsoleCtrlHandler(NULL, TRUE), a handler
+ * function is not inherited by child processes, so a command started from
+ * the application can still be interrupted with Ctrl+C. */
+static BOOL WINAPI lt__win_ctrl_handler(DWORD type) {
+  return (type == CTRL_C_EVENT || type == CTRL_BREAK_EVENT) ? TRUE : FALSE;
+}
+
 int lt__plat_init(void) {
 #if defined(LIBTERM_BENCH_HEADLESS_OUTPUT)
   return LT_OK;
@@ -81,6 +94,8 @@ int lt__plat_init(void) {
     return LT_ERR_INIT_OPEN;
   }
 
+  (void)SetConsoleCtrlHandler(lt__win_ctrl_handler, TRUE);
+
   lt__win_modes_saved = 1;
   return LT_OK;
 }
@@ -108,6 +123,7 @@ int lt__plat_shutdown(void) {
     (void)lt__plat_flush();
     (void)SetConsoleMode(lt__win_in, lt__win_in_mode_orig);
     (void)SetConsoleMode(lt__win_out, lt__win_out_mode_orig);
+    (void)SetConsoleCtrlHandler(lt__win_ctrl_handler, FALSE);
   }
 
   lt__win_in = INVALID_HANDLE_VALUE;
